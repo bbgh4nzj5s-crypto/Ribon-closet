@@ -1,0 +1,3 @@
+export const words=s=>String(s||'').normalize('NFKC').toLocaleLowerCase('ja').trim().split(/\s+/u).filter(Boolean);
+const norm=s=>String(s||'').normalize('NFKC').toLocaleLowerCase('ja');
+export function matchesBest(b,f={}){const name=norm(b.name),ni=words(f.nameIn),ne=words(f.nameOut),ii=words(f.itemIn),ie=words(f.itemOut),cats=f.cats||[];if(!ni.every(w=>name.includes(w))||ne.some(w=>name.includes(w)))return false;const items=(b.slots||[]).flatMap(slot=>Object.entries(slot||{}).filter(([cat,i])=>i&&(!cats.length||cats.includes(cat))).map(([,i])=>norm(i.name)));if(ii.length)return items.some(n=>ii.every(w=>n.includes(w))&&!ie.some(w=>n.includes(w)));if(ie.length)return !items.some(n=>ie.some(w=>n.includes(w)));return !cats.length||items.length>0}

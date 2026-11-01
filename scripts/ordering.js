@@ -1,0 +1,5 @@
+export function syncOrder(order=[],rows=[]){const ids=new Set(rows.map(x=>x.id)),out=[...new Set(order)].filter(id=>ids.has(id));const seen=new Set(out);for(const r of [...rows].sort((a,b)=>(a.createdAt||a.updated||0)-(b.createdAt||b.updated||0)))if(!seen.has(r.id)){out.push(r.id);seen.add(r.id)}return out}
+export function ordered(rows,ids){const rank=new Map(ids.map((id,n)=>[id,n]));return [...rows].sort((a,b)=>(rank.get(a.id)??Infinity)-(rank.get(b.id)??Infinity))}
+// Only fill the slots belonging to visible rows. Hidden rows never move.
+export function reorderVisible(order,visible,from,to){if(from===to||!visible.includes(from)||!visible.includes(to))return [...order];const moved=visible.filter(x=>x!==from);moved.splice(moved.indexOf(to)+(visible.indexOf(from)<visible.indexOf(to)?1:0),0,from);const allowed=new Set(visible);let n=0;return order.map(id=>allowed.has(id)?moved[n++]:id)}
+export function closePair(slots,active){return {slots:active===1?[structuredClone(slots[1]),structuredClone(slots[0])]:structuredClone(slots),active:0,compare:false}}

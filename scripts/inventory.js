@@ -1,0 +1,11 @@
+import {sameCard} from './catalog-import.js';
+const key=s=>String(s||'').normalize('NFKC').toUpperCase();
+export function coordinateRef(c){return {id:c.id,name:c.name,editionId:c.editionId||'',source:c.source,total:c.total,parts:c.parts.map(p=>({...p}))}}
+export function relatedCoordinate(item,coords){if(item.catalogRef?.parts?.length)return item.catalogRef;const matches=coords.filter(c=>c.parts.some(p=>sameCard(p,item)));return matches.find(c=>c.name===item.name)||matches.find(c=>c.source===item.source)||matches[0]||null}
+export function qrState(i){const individual=i.individualQR||(i.qr&&!i.fullQR?{image:i.qr,bytes:i.qrBytes,legacy:true}:null);return {individual,full:i.fullQR||null}}
+export function syncQR(i){const {individual,full}=qrState(i);const current=i.qrPreference==='full'&&full?full:individual||full;return {...i,...(individual?{individualQR:individual}:{}),qr:current?.image||'',qrBytes:current?.bytes||[],qrKind:individual?(individual.legacy?'既存QR':'個別QR'):full?'フルコーデQR':''}}
+export function assignIndividual(i,r){return syncQR({...syncQR(i),individualQR:{image:r.qr,bytes:r.bytes,valid:true},...(i.qrPreference?{qrPreference:'individual'}:{})})}
+export function assignFull(i,r,link){const old=syncQR(i);return syncQR({...old,fullQR:{image:r.qr,bytes:r.bytes,valid:true,...link}})}
+export function clearQR(i,kind){const n={...syncQR(i)};if(kind==='full')delete n.fullQR;else delete n.individualQR;delete n.qr;delete n.qrBytes;return syncQR(n)}
+export function buildRelatedDraft(item,coord,items){const parts={};for(const p of coord.parts){const existing=items.find(i=>sameCard(i,p));parts[p.cat]=syncQR(existing?{...p,...existing,catalogRef:coordinateRef(coord)}:{...p,name:coord.name,status:'wanted',catalogRef:coordinateRef(coord)})}return {name:item.name,parts,selectedCats:[item.cat],catalogRef:coordinateRef(coord),focusId:item.id,related:true,preserveOthers:true,total:coord.total,source:coord.source,fav:!!item.fav,note:item.note||'',attrs:Object.fromEntries(['colors','materials','tastes','motifs'].map(k=>[k,[...(item[k]||[])]])),full:false}}
+export function selectedEntries(batch){const selected=batch.selectedCats||Object.keys(batch.parts||{});return Object.entries(batch.parts||{}).filter(([c])=>selected.includes(c))}

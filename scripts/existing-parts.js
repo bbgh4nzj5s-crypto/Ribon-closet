@@ -1,0 +1,5 @@
+import {coordinateIdentity} from './coordinate-groups.js';
+export const comparisonName=n=>String(n||'').replace(/\s/gu,'');
+export function existingPartGroups(items,name){const key=comparisonName(name),groups=new Map();if(!key)return [];for(const item of items){if(comparisonName(item.name)!==key)continue;const identity=coordinateIdentity(item);if(!groups.has(identity))groups.set(identity,[]);groups.get(identity).push({id:item.id,cat:item.cat,image:item.image||'',closet:!!item.inCloset,favorites:[item.fav,item.fav2,item.fav3].map((v,n)=>v?n+1:null).filter(Boolean)})}return [...groups].map(([identity,parts])=>({identity,parts}))}
+export function selectExistingParts(groups,ids){const selected=new Set(ids);return groups.flatMap(g=>g.parts.filter(p=>selected.has(p.id)).map(p=>({...p,favorites:[...p.favorites],identity:g.identity})))}
+export function existingPartConflicts(parts,newCategories){const cats=[...parts.map(p=>p.cat),...newCategories];return {duplicates:[...new Set(cats.filter((x,i)=>cats.indexOf(x)!==i))],dressConflict:cats.includes('ワンピース')&&(cats.includes('トップス')||cats.includes('ボトムス'))}}

@@ -1,0 +1,13 @@
+# Pro STEP1追加改修
+
+Base: 8cbeb34ab9279cb5132fe88c13bc1d13d8acb0ee. Only the independent confirmation Site is updated.
+
+STEP1: viewport height follows visualViewport and the unchanged bottom navigation's top edge; pool is bottom-aligned and horizontally scrollable. QR long press opens a dark, read-only preview. QR placement uses tap/auto double tap; item-image long-press drag is retained, including cover drop targets. A selected unplaced item can be tapped directly into the larger thumbnail frame; its original pool entry remains. The frame's top-right switch changes destination to separate fullImage data; switch back restores thumb display, and the small remove button clears only the active cover field. Category labels shortened (ワンピ), existing icons retained.
+
+Shared QR: mutually exclusive per-row full/pair modes. A single selected QR overlays only currently used parts; pair targets only tops/bottoms. No unused categories are created by shared auto-placement. Directly tapping an empty category explicitly creates that one QR-only entry. Existing QR requires confirmation. Individual QR and registered records stay unchanged. Replaced shared blobs, bytes and source photos are retained in sharedQRHistory; disabling a scope reveals originals. Pair membership follows the actual category, preventing accidental accessory/shoe propagation. Saved shared QR can be re-enabled without selecting its photo again (with confirmation when original QR exists). Pro raw-data, deferred persistence and existing media backup support include these fields automatically.
+
+Files: pro-step1-screen.js, pro-placement.js, pro-qr-state.js, pro-shared-qr.js, scoped dist/style.css, generated dist/app.js; app-src.js has only directly required shared-QR byte/metadata handling for subsequent Pro steps. No home/catalog/items/styling/background/best/normal registration/URL extractor source or data changes.
+
+Checks: npm test; npm run test:pro-step1-v3; build. Automated cases include pair exclusivity, target restrictions, dress/no phantom parts, cancel/confirm, preservation of individual QR and registered IDs, return-to-pool, JSON media backup and IndexedDB reopen. Real QR decode/regeneration byte tests unchanged. Browser checks: pool bottom equals nav top; direct thumbnail assignment without modal and source pool entry retained; full-image switch; QR press preview is read-only; pair reflects only tops/bottoms; full reflects four used parts without creating dress; short labels.
+
+Limits: physical iPhone Safari unavailable. Pro final bulk registration remains unimplemented as in the base; all input including common QR is saved as resumable Pro drafts. Existing public Ribbon Closet, both extractor APIs, old Worker relay and paused Render migration remain untouched.

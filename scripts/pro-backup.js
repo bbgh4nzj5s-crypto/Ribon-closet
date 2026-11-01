@@ -1,0 +1,6 @@
+// Only Pro draft records opt into media encoding; other backup records are unchanged.
+const isPro=row=>row?.id?.startsWith('deferred-registration:')&&row.batch?.mode==='pro';
+async function encode(v){if(v instanceof Blob){const bytes=new Uint8Array(await v.arrayBuffer());let binary='';for(let n=0;n<bytes.length;n+=8192)binary+=String.fromCharCode(...bytes.subarray(n,n+8192));return {$proMedia:true,type:v.type,data:btoa(binary)}}if(Array.isArray(v))return Promise.all(v.map(encode));if(v&&typeof v==='object'){const out={};for(const[k,x]of Object.entries(v))out[k]=await encode(x);return out}return v}
+function decode(v,depth=0){if(depth>40)throw Error('Pro下書きの階層が深すぎます');if(v?.$proMedia===true){if(typeof v.data!=='string'||v.data.length>50000000||typeof v.type!=='string'||!/^image\/(png|jpeg|webp|heic|heif|gif|bmp)$/i.test(v.type))throw Error('Pro下書きの画像形式が違います');return new Blob([Uint8Array.from(atob(v.data),c=>c.charCodeAt(0))],{type:v.type})}if(Array.isArray(v))return v.map(x=>decode(x,depth+1));if(v&&typeof v==='object'){const out={};for(const[k,x]of Object.entries(v)){if(['__proto__','constructor','prototype'].includes(k))throw Error('下書きの形式が不正です');out[k]=decode(x,depth+1)}return out}return v}
+export const encodeProBackup=rows=>Promise.all(rows.map(r=>isPro(r)?encode(r):r));
+export const decodeProBackup=rows=>rows.map(r=>isPro(r)?decode(r):r);
