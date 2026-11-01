@@ -1,0 +1,11 @@
+# Ribbon Closet Pro STEP1–3 and coordinate image display
+
+Base: 0e03221ee2e375ccf92aa481fe33e073b3d56cc1. Original public site and both extractors/relays unchanged.
+
+Implemented: display-only coordinate cover fallback (thumb/total, fullImage/fullBodyImage, dress, top, bottom, shoes, accessory); placeholders and contain sizing. STEP1 compact header/help; thumbnail/full-body images stored separately, reusable unplaced item images; explicit registered ID references shown in the correct slot, image/QR switch and registered badges; collapse suggestions on success. QR-only placeholders support automatic/double-tap/manual/drag placement, return to pool, no overwrite, separate item/QR state. STEP2 selected references only, no linking confirmation/closet enrollment. Closet grid includes all registered records without touching inCloset or ownership. STEP3 opt-in initial two colors only for untouched new Pro entries, preserved deselection, scoped horizontal color controls.
+
+Pro drafts autosave into the existing deferred state store; resume preserves saved STEP. Pro backup encoding retains Blob media (including pool and assigned QR) and separate thumbnail/full-body DataURLs. Restore requires the existing 'saved outfit/drafts' option, preserves colliding drafts unless overwrite selected, and does not delete registered items.
+
+Checks: npm test; npm run test:pro-round2; npm run build. Browser: header/help, QR-only double-tap placement and return, reference badge and panel collapse, reuse of pool image for thumbnail, STEP2 removed controls, STEP3 two defaults, draft resume. IndexedDB reopen and JSON backup media roundtrip automated. QR decode/regenerate routines unchanged and their real-image byte-equality tests pass.
+
+Limits: physical iPhone Safari unavailable. Pro final bulk registration remains unimplemented as in base; QR-only work is saved as a resumable Pro draft. Broadly distribute only after user validates iPhone interactions. Older Pro tests that exercise the replaced inline STEP1 fixture need migration; current requested behavior is covered by test:pro-round2. Rendering and storage are within the existing separate confirmation Site, not the original public site. No Render migration resumed.

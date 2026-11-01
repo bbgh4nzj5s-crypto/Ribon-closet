@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.6"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/core.test.mjs && node scripts/layout-catalog.test.mjs && node scripts/inventory-backup.test.mjs && node scripts/organization.test.mjs && node scripts/catalog-import.test.mjs && node scripts/new-features.test.mjs && node scripts/drag-sort.test.mjs && node scripts/copy-past.test.mjs && node scripts/coordinate-migration.test.mjs && node scripts/manual-group-flow.test.mjs && node scripts/favorites.test.mjs && node scripts/manual-registration.test.mjs && node scripts/items-list.test.mjs && node scripts/registration-ui.test.mjs && node scripts/shared-status-order.test.mjs && node scripts/qr-tile-view.test.mjs && node scripts/edit-draft-flow.test.mjs && node scripts/registration-transitions.test.mjs && node scripts/registration-integration.test.mjs && node scripts/deferred-drafts.test.mjs && node scripts/deferred-events.test.mjs && node scripts/registration-readonly.test.mjs",
+    "build": "esbuild app-src.js --bundle --minify --outfile=dist/app.js",
+    "test:pro-recovery": "node scripts/pro-step3-events.test.mjs && node scripts/pro-events.test.mjs && node scripts/pro-step1-events.test.mjs && node scripts/pro-limit-events.test.mjs && node scripts/pro-persistence.test.mjs && node scripts/existing-parts.test.mjs && node scripts/pro-qr-state.test.mjs",
+    "test:review": "node scripts/detail-popup-events.test.mjs && node scripts/registration-review-events.test.mjs && node scripts/pro-review-events.test.mjs",
+    "test:compact": "node scripts/pro-set-events.test.mjs && node scripts/pro-compact-qr-events.test.mjs && node scripts/background-remove-events.test.mjs && node scripts/pro-review-events.test.mjs && node scripts/registration-review-events.test.mjs && node scripts/detail-popup-events.test.mjs",
+    "test:colors": "node scripts/color-suggestions.test.mjs && node scripts/color-picker-events.test.mjs && node scripts/pro-color-events.test.mjs",
+    "test:pro-blocks": "node scripts/pro-block-events.test.mjs && node scripts/pro-drag-events.test.mjs",
+    "test:integration-v51": "node scripts/integration-v51-preservation.test.mjs && node scripts/best-background.test.mjs && node scripts/coordinate-book-labels.test.mjs",
+    "test:pro-step12": "node scripts/pro-request.test.mjs && node scripts/pro-step1-events.test.mjs && node scripts/pro-persistence.test.mjs && node scripts/existing-parts.test.mjs && node scripts/pro-qr-state.test.mjs && node scripts/pro-qr-digitalization.test.mjs",
+    "test:pro-round2": "node scripts/pro-round2.test.mjs && node scripts/coordinate-items.test.mjs && node scripts/color-picker-events.test.mjs && node scripts/pro-qr-digitalization.test.mjs && node scripts/pro-persistence.test.mjs && node scripts/url-import.test.mjs && node scripts/favorite-or.test.mjs",
+    "test:pro-step1-v3": "node scripts/pro-step1-v3.test.mjs && node scripts/pro-round2.test.mjs && node scripts/pro-qr-state.test.mjs && node scripts/pro-qr-digitalization.test.mjs"
+  }
+}

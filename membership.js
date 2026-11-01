@@ -1,0 +1,7 @@
+// wishState: 0 none, 1 wanted, 2 priority. Legacy wanted/wishPriority are synchronized compatibility mirrors.
+export const wishState=i=>[0,1,2].includes(i.wishState)?i.wishState:(i.wanted===true||i.wanted===undefined&&i.status==='wanted')?(i.wishPriority>0?2:1):0;
+export const isWanted=i=>typeof i.wanted==='boolean'?i.wanted:i.status==='wanted';
+export const inCloset=i=>typeof i.inCloset==='boolean'?i.inCloset:i.status!=='wanted'&&i.status!=='stored';
+export function membership(i){const wanted=typeof i.wanted==='boolean'?i.wanted:isWanted(i),closet=inCloset(i);return {...i,wishState:wanted?(i.wishPriority>0?2:1):0,wanted,inCloset:closet,wishPriority:wanted&&i.wishPriority>0?1:0,status:closet?'owned':wanted?'wanted':'stored',wantedAt:i.wantedAt||(wanted?(i.createdAt||i.updated||0):undefined)}}
+export const setMembership=(i,c)=>{if(c.wishState!==undefined)c={...c,wanted:c.wishState>0,wishPriority:c.wishState===2?1:0};return membership({...membership(i),...c,...(c.wanted===true&&!isWanted(i)?{wantedAt:Date.now()}:{})})};
+export function hasValidQR(i){const valid=q=>q&&q.valid!==false&&/^data:image\/(png|jpeg|webp);base64,/.test(q.image||'')&&Array.isArray(q.bytes)&&q.bytes.length>0&&q.bytes.every(x=>Number.isInteger(x)&&x>=0&&x<=255);return !!(valid(i.individualQR)||valid(i.fullQR)&&(!i.cardId||!i.fullQR.cardIds?.length||i.fullQR.cardIds.includes(i.cardId))||!i.individualQR&&!i.fullQR&&valid({image:i.qr,bytes:i.qrBytes}))}

@@ -1,0 +1,7 @@
+// Search text never participates in item identity. This app contains one game.
+export const GAME='aipri-verse';
+export const cardKey=value=>String(value||'').normalize('NFKC').trim().toUpperCase();
+export const coordinateKey=c=>JSON.stringify([c.gameId||GAME,c.editionId||c.id?.split('-')[0]||'',c.id]);
+export function sameCard(a,b){return !!cardKey(a.cardId)&&cardKey(a.cardId)===cardKey(b.cardId)&&(a.gameId||GAME)===(b.gameId||GAME)}
+export function exactCoordinate(coords,key){return coords.find(c=>coordinateKey(c)===key)||null}
+export function registrationDraft(coord,items){if(!coord?.id||!Array.isArray(coord.parts))throw Error('コーデ情報を取得できませんでした');const ref={id:coord.id,name:coord.name,editionId:coord.editionId||'',gameId:coord.gameId||GAME,total:coord.total,source:coord.source,parts:structuredClone(coord.parts)};const parts={},selectedCats=[],existingIds=[];for(const part of coord.parts){const prior=items.find(i=>sameCard(i,{...part,gameId:ref.gameId}));if(parts[part.cat])throw Error('同じカテゴリーのパーツが複数あります');if(prior){parts[part.cat]=structuredClone(prior);existingIds.push(prior.id)}else{parts[part.cat]={...structuredClone(part),gameId:ref.gameId,name:coord.name,status:'owned',catalogRef:structuredClone(ref),total:coord.total||'',source:coord.source||''};selectedCats.push(part.cat)}}return {name:coord.name,attrs:{colors:[],materials:[],tastes:[],motifs:[]},parts,selectedCats,existingIds,related:true,catalogRef:ref,total:coord.total||'',source:coord.source||'',fav:false,note:'',full:false}}

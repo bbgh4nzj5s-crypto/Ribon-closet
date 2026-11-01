@@ -1,0 +1,45 @@
+import {CATS,normalize} from './core.js';
+import {coordinateIdentity} from './coordinate-groups.js';
+import {coordinateCover,isOwned,requiredCats} from './coordinate-items-model.js';
+import {slotQR,proSlot} from './pro-placement.js';
+export const PRO_RECORD_PREFIX='coordinate-record:';
+export const filledProRows=state=>state.rows.flatMap((row,n)=>CATS.some((_,c)=>proSlot(state,n,c,[]))||row.name?.trim()||row.thumb||row.fullImage?[{row,n}]:[]);
+const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+export function registrationRows(state,items){return filledProRows(state).map(({row,n})=>{const parts=CATS.flatMap((cat,col)=>{const slot=proSlot(state,n,col,items);if(!slot)return [];const item=slot.registered?slot.image:{...slot.image,image:slot.image.url||'',name:row.name,cat,individualQR:slotQR(slot)?{image:'data:image/png;base64,eA==',bytes:[1],valid:true}:null};return [{cat,item,slot,owned:isOwned(item)}]});const cats=requiredCats(parts),display=cats.map(cat=>parts.find(p=>p.cat===cat)||{cat,item:null,owned:false});return {key:row.selectedSet||JSON.stringify(['manual',row.id]),name:row.name||'名称未登録',total:coordinateCover([{thumb:row.thumb,fullImage:row.fullImage},...parts.map(p=>p.item)]),parts:display,owned:display.filter(p=>p.owned).length,count:cats.length,row,n}})}
+export function fileAssignmentCount(state){return filledProRows(state).filter(({row})=>row.fileIds?.length).length}
+export function setProFiles(state,rowIds,fileIds){const selected=new Set(rowIds);for(const row of state.rows)if(selected.has(row.id))row.fileIds=[...new Set(fileIds)]}
+export function proVariant(state){return state.variant||'with-qr'}
+export function beginProReview(state,items,records=[]){state.step=2;for(const {row,n}of filledProRows(state)){row.baselines||={};for(const col of CATS.keys()){const slot=proSlot(state,n,col,items);if(slot?.registered&&!row.baselines[slot.image.id])row.baselines[slot.image.id]=structuredClone(slot.original||slot.image)}if(row.fileIds===undefined)row.fileIds=[...(records.find(r=>r.key===row.selectedSet)?.folderIds||[])]}}
+export function patchProCoordinate(state,n,patch,items){const row=state.rows[n];row.metadata={...row.metadata,...patch};for(let col=0;col<CATS.length;col++){const slot=proSlot(state,n,col,items);if(!slot)continue;if(slot.registered)(row.partEdits||={})[slot.image.id]={...slot.image,...structuredClone(patch)};else{Object.assign(slot.image,structuredClone(patch));if(['fav','fav2','fav3'].some(k=>Object.hasOwn(patch,k)))slot.image.favorites=[slot.image.fav?1:0,slot.image.fav2?2:0,slot.image.fav3?3:0].filter(Boolean)}}}
+export async function prepareProRegistration(state,items,{photo,imagePhoto=photo,records=[],files=[],now=Date.now()}={}){
+ const rows=registrationRows(state,items);if(!rows.length)throw Error('登録するコーデを配置してください');if(!state.deferredId)throw Error('下書きを保存してから登録してください');
+ const newItems=[],patches=[],coordinates=[],usedIds=new Set(),keys=new Set(),variant=proVariant(state);
+ for(const {row,n,key}of rows){if(keys.has(key))throw Error('同じコーデが複数行に選択されています');keys.add(key);const own=[];
+  for(let col=0;col<CATS.length;col++){const slot=proSlot(state,n,col,items);if(!slot)continue;const id=slot.image.id;if(usedIds.has(id))throw Error('同じアイテムが複数のコーデに選択されています');usedIds.add(id);own.push(id);
+   const base=slot.registered?(slot.original||items.find(i=>i.id===id)):null;let record;
+   if(base){record={...base};const staged=row.partEdits?.[id];if(staged){const before=row.baselines?.[id]||base;for(const[k,v]of Object.entries(staged))if(!['id','cardId','catalogRef','coordinateGroupId'].includes(k)&&!equal(v,before[k]))record[k]=structuredClone(v)}}
+   else{const image=slot.image;record={id,name:row.name?.trim()||'名称未登録',cat:CATS[col],image:image.blob?await imagePhoto(image.blob):'',coordinateGroupId:row.id,coordinateGroupName:row.name?.trim()||'名称未登録',createdAt:now,updated:now,inCloset:!!image.closet,wanted:!!image.wanted,wishState:image.wishState||0,wishPriority:image.wishPriority||0,fav:Array.isArray(image.favorites)?image.favorites.includes(1):!!image.fav,fav2:Array.isArray(image.favorites)?image.favorites.includes(2):!!image.fav2,fav3:Array.isArray(image.favorites)?image.favorites.includes(3):!!image.fav3,note:image.note||'',...Object.fromEntries(['colors','materials','tastes','motifs'].map(k=>[k,[...(image[k]||row.metadata?.[k]||[])]]))};if(typeof image.ownershipOverride==='boolean')record.ownershipOverride=image.ownershipOverride;
+    if(variant==='with-qr'&&image.individualQR){if(!image.individualQRBytes?.length)throw Error('QRデータを確認して選択し直してください');record.individualQR={image:await photo(image.individualQR),bytes:[...image.individualQRBytes],valid:true}}
+   }
+   // QR-free registration preserves existing referenced QR; it never imports new QR.
+   const shared=variant==='with-qr'&&slotQR(slot);if(shared?.shared){if(!shared.bytes.length)throw Error('共通QRデータを確認してください');if(record.fullQR)record.proQRHistory=[...(record.proQRHistory||[]),structuredClone(record.fullQR)];record.fullQR={id:`pro-shared:${state.deferredId}:${row.id}:${shared.scope}`,image:await photo(shared.blob),bytes:[...shared.bytes],valid:true,scope:shared.scope==='pair'?'tops-bottoms':'full'};record.qrPreference='full'}
+   if(Object.hasOwn(row,'thumb'))record.thumb=row.thumb;if(Object.hasOwn(row,'fullImage'))record.fullImage=row.fullImage;
+   if(!base&&row.selectedSet){try{const identity=JSON.parse(row.selectedSet);if(identity[0]==='manual')record.coordinateGroupId=identity[1];else if(identity[0]==='official'){const ref=items.find(i=>coordinateIdentity(i)===row.selectedSet)?.catalogRef;if(ref)record.catalogRef=structuredClone(ref)}}catch{}}record=normalize(record);
+   if(base){const patch={};for(const[k,v]of Object.entries(record))if(!equal(v,base[k]))patch[k]=v;if(Object.keys(patch).length)patches.push({id,before:row.baselines?.[id]||base,patch})}
+   else newItems.push(record);
+  }
+  const qrHistory=[...(records.find(r=>r.key===key)?.qrHistory||[])];if(variant==='with-qr')for(const entry of row.sharedQRHistory||[])for(const prefix of ['fullQR','pairQR'])if(entry[prefix] instanceof Blob)qrHistory.push({scope:prefix==='fullQR'?'full':'tops-bottoms',image:await photo(entry[prefix]),bytes:entry[prefix+'Bytes']||[],sourceImage:entry[prefix+'Source'] instanceof Blob?await photo(entry[prefix+'Source']):''});const prior=records.find(r=>r.key===key),legacy=items.filter(i=>coordinateIdentity(i)===key).map(i=>i.id),id=prior?.id||PRO_RECORD_PREFIX+row.id;
+  coordinates.push({...prior,id,kind:'coordinate-record',coordinateId:prior?.coordinateId||row.id,key,name:row.name?.trim()||'名称未登録',thumb:row.thumb??prior?.thumb??'',fullImage:row.fullImage??prior?.fullImage??'',itemIds:[...new Set([...(prior?.itemIds||[]),...legacy,...own])],folderIds:[...(row.fileIds||[])],metadata:structuredClone(row.metadata||prior?.metadata||{}),qrHistory,updated:now});
+ }
+ return {draftId:state.deferredId,variant,newItems,patches,coordinates,files:structuredClone(files)};
+}
+export function commitProRegistration(db,plan){return new Promise((resolve,reject)=>{
+ const tx=db.transaction(['items','state'],'readwrite'),st=tx.objectStore('state'),it=tx.objectStore('items'),marker='pro-completed:'+plan.draftId;let result,error;
+ const requests=[st.get(marker),it.getAll(),st.get('organization'),st.getAll()];let remaining=requests.length;
+ for(const req of requests)req.onsuccess=()=>{if(--remaining)return;try{const [done,existing,org,states]=requests.map(r=>r.result);if(done){result={alreadyCompleted:true,ids:done.ids};return}const byId=new Map(existing.map(i=>[i.id,i])),cards=new Set(existing.map(i=>i.cardId).filter(Boolean));for(const item of plan.newItems){if(byId.has(item.id)||item.cardId&&cards.has(item.cardId))throw Error('登録済みデータと重複するため保存を中止しました');it.add(item);byId.set(item.id,item)}for(const {id,before,patch}of plan.patches){const current=byId.get(id);if(!current)throw Error('参照した登録アイテムが見つかりません');for(const key of Object.keys(patch))if(!equal(normalize(current)[key],before[key])&&!equal(normalize(current)[key],patch[key]))throw Error('登録済みデータが別の操作で更新されています。再確認してください');it.put(normalize({...current,...patch,id}))}
+  const organization=org||{id:'organization',tags:{},folders:[]};organization.coordinateFiles||={files:[]};for(const f of plan.files)if(!organization.coordinateFiles.files.some(x=>x.id===f.id))organization.coordinateFiles.files.push(f);st.put(organization);
+  for(const coordinate of plan.coordinates){const current=states.find(s=>s.id===coordinate.id);if(current&&current.updated!==coordinate.previousUpdated&&current.updated>coordinate.updated)throw Error('コーデ情報が更新されています');st.put(coordinate)}
+  const ids=plan.newItems.map(i=>i.id);st.put({id:marker,ids,coordinateIds:plan.coordinates.map(c=>c.id),variant:plan.variant,at:Date.now()});st.delete('deferred-registration:'+plan.draftId);result={alreadyCompleted:false,ids,coordinateIds:plan.coordinates.map(c=>c.id)};
+ }catch(e){error=e;tx.abort()}};
+ tx.oncomplete=()=>resolve(result);tx.onabort=()=>reject(error||tx.error||Error('登録できませんでした'));tx.onerror=()=>{};
+})}

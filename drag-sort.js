@@ -1,0 +1,23 @@
+// One owned drag session. Every exit releases capture, listeners, RAF and the body ghost.
+let disposeCurrent=()=>{};
+export function cancelSort(){disposeCurrent();disposeCurrent=()=>{}}
+export function nearestCard(cards,x,y){return cards.reduce((best,card)=>{const r=card.getBoundingClientRect();const distance=Math.hypot(x-(r.left+r.width/2),y-(r.top+r.height/2));return !best||distance<best.distance?{card,distance}:best},null)?.card}
+export function bindSort(root,{selector,idAttr,onDrop}){
+ cancelSort();let state=null,frame=0,disposed=false;const removers=[],cards=()=>[...root.querySelectorAll(selector)];
+ const listen=(el,type,fn,options)=>{el.addEventListener(type,fn,options);removers.push(()=>el.removeEventListener(type,fn,options))};
+ const clear=(restore=true)=>{const s=state;state=null;cancelAnimationFrame(frame);if(!s)return;clearTimeout(s.timer);s.ghost?.remove();s.card.classList.remove('sort-placeholder');try{if(root.hasPointerCapture(s.pointer))root.releasePointerCapture(s.pointer)}catch{}if(restore&&root.isConnected)for(const id of s.initial){const card=cards().find(c=>c.getAttribute(idAttr)===id);if(card)root.append(card)}};
+ const dispose=()=>{if(disposed)return;disposed=true;clear();observer.disconnect();removers.forEach(fn=>fn());for(const card of cards())card.style.touchAction='';};
+ disposeCurrent=dispose;
+ const observer=new MutationObserver(()=>{if(!root.isConnected||state&&!root.contains(state.card))dispose()});observer.observe(document.body,{childList:true,subtree:true});
+ const cancel=()=>clear();listen(window,'blur',cancel);listen(window,'pagehide',dispose);listen(document,'visibilitychange',()=>{if(document.hidden)clear()});listen(window,'keydown',e=>{if(e.key==='Escape')clear()});
+ const move=(x,y)=>{const s=state;if(!s?.ghost)return;s.x=x;s.y=y;Object.assign(s.ghost.style,{left:x-s.dx+'px',top:y-s.dy+'px'});const target=nearestCard(cards(),x,y);if(target&&target!==s.card){const list=cards(),after=list.indexOf(s.card)<list.indexOf(target);root.insertBefore(s.card,after?target.nextSibling:target)}};
+ const animate=()=>{if(!state?.ghost)return;if(!root.isConnected){dispose();return}let sc=root;while(sc&& !['auto','scroll'].includes(getComputedStyle(sc).overflowY))sc=sc.parentElement;sc||=document.scrollingElement;const r=sc===document.scrollingElement?{top:0,bottom:innerHeight}:sc.getBoundingClientRect();if(state.y<r.top+55)sc.scrollTop-=10;else if(state.y>r.bottom-55)sc.scrollTop+=10;move(state.x,state.y);frame=requestAnimationFrame(animate)};
+ for(const card of cards()){
+  card.style.touchAction='none';listen(card,'contextmenu',e=>e.preventDefault());listen(card,'dragstart',e=>e.preventDefault());listen(card,'click',e=>{e.preventDefault();e.stopImmediatePropagation()},true);
+  listen(card,'pointerdown',e=>{if(e.button!==0||state||e.target.closest('.corner-heart'))return;e.preventDefault();const r=card.getBoundingClientRect();state={card,pointer:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,dx:e.clientX-r.left,dy:e.clientY-r.top,initial:cards().map(c=>c.getAttribute(idAttr)),ready:false};state.timer=setTimeout(()=>{if(state)state.ready=true},260);try{root.setPointerCapture(e.pointerId)}catch{clear()}});
+ }
+ listen(window,'pointermove',e=>{const s=state;if(!s||e.pointerId!==s.pointer)return;if(e.clientX<0||e.clientY<0||e.clientX>innerWidth||e.clientY>innerHeight){clear();return}e.preventDefault();if(!s.ghost){if(!s.ready||Math.hypot(e.clientX-s.startX,e.clientY-s.startY)<7)return;const r=s.card.getBoundingClientRect();s.ghost=s.card.cloneNode(true);s.ghost.classList.add('sort-ghost');s.ghost.removeAttribute(idAttr);s.ghost.setAttribute('aria-hidden','true');Object.assign(s.ghost.style,{position:'fixed',width:r.width+'px',height:r.height+'px',margin:'0'});document.body.append(s.ghost);s.card.classList.add('sort-placeholder');frame=requestAnimationFrame(animate)}move(e.clientX,e.clientY)},{passive:false});
+ listen(window,'pointerup',e=>{const s=state;if(!s||e.pointerId!==s.pointer)return;const valid=s.ghost&&root.isConnected&&e.clientX>=0&&e.clientY>=0&&e.clientX<=innerWidth&&e.clientY<=innerHeight,result=cards().map(c=>c.getAttribute(idAttr)),initial=s.initial;clear(!valid);if(valid&&result.join()!==initial.join())Promise.resolve(onDrop(result,initial)).catch(()=>{if(root.isConnected)for(const id of initial){const c=cards().find(c=>c.getAttribute(idAttr)===id);if(c)root.append(c)}})});
+ listen(window,'pointerout',e=>{if(!e.relatedTarget&&(e.clientX<=0||e.clientY<=0||e.clientX>=innerWidth||e.clientY>=innerHeight))clear()});listen(window,'pointercancel',cancel);listen(root,'lostpointercapture',()=>{if(state)clear()});
+ return dispose;
+}
